@@ -51,18 +51,21 @@ class Image_Scraping(object):
         self.max = limit
         self.thread = thread
         self.scroll = scroll
-        self.proxy_ip, self.proxy_port = zip(proxy.split(":")[-2:])
         self.color = color
         self.image_type = image_type
-        if self.proxy_ip:
-            self.proxyDict = { 
-                              "http"  : str(self.proxy_ip[0]), 
-                              "https" : str(self.proxy_ip[0])
-                              }
+        self.proxy_ip = proxy
+        self.proxy_port = proxy
+        if proxy:
+            self.proxy_ip, self.proxy_port = zip(proxy.split(":")[-2:])
+            if self.proxy_ip:
+                self.proxyDict = { 
+                                  "http"  : str(self.proxy_ip[0]), 
+                                  "https" : str(self.proxy_ip[0])
+                                  }
 
-            #Request urlopen
-            os.environ["http_proxy"]=proxy
-            os.environ["https_proxy"]=proxy
+                #Request urlopen
+                os.environ["http_proxy"]=proxy
+                os.environ["https_proxy"]=proxy
         
 
     def get_folder(self, path):
@@ -75,8 +78,7 @@ class Image_Scraping(object):
             return True
 
     def collector(self, url, html_link_queue, end):
-
-        browser = webdriver.Firefox
+        browser = webdriver.Firefox()
 
         if self.proxy_ip:
             capabilities = webdriver.DesiredCapabilities().FIREFOX
@@ -97,20 +99,17 @@ class Image_Scraping(object):
 
         while True:
             browser.execute_script("window.scrollBy(0,{0})".format(int(self.scroll)))
-            for x in browser.find_elements_by_xpath("//a[@class='rg_l']"):
-                xx = x.get_attribute("href")
-                if xx:
-                    html_link_queue.put(xx)
+            for blk in browser.find_elements_by_xpath("//a[@class='rg_l']"):
+                image_link = blk.get_attribute("href")
+                if image_link:
+                    html_link_queue.put(image_link)
             if end.value:
                 break
         browser.close()
 
 
     def download_worker(self, args):
-        end = args[0]
-        html_link_queue = args[1]
-        thread = args[2]
-        dir_name = args[3]
+        end, html_link_queue, thread, dir_name = args
         while True:
             link = html_link_queue.get()
             try:
@@ -166,6 +165,7 @@ class Image_Scraping(object):
 
     def scraping(self, *args):
         i = 0
+        _start = time.time()
         while i < len(self.search_keyword):
             search_term = self.search_keyword[i]
             search = search_term.replace(' ', '%20')
@@ -188,11 +188,11 @@ class Image_Scraping(object):
                     if not self.get_folder(dir_name):
                         raise Exception("cant create folder!!!")
 
-            _type = "tbs=itp:{0}".format(self.image_type)
+            _type = "tbs=itp:{0}".format(self.image_type) if self.image_type else ""
             logger.info("Saving Files in {0}".format(dir_name))
             color_param = ('&tbs=ic:specific,isc:' + self.color) if self.color else ''
             url = 'https://www.google.com/search?q=' + search + '&espv=2&biw=1366&bih=667&site=webhp&source=lnms&'+ _type +'&tbm=isch' + color_param + '&sa=X&ei=XosDVaCXD8TasATItgE&ved=0CAcQ_AUoAg'
-            logger.info("Starting Download Process...")
+            logger.info("Starting Download Process...{0}".format(url))
 
             manager = multiprocessing.Manager()
             lifetime_end = manager.Value(ctypes.c_char_p, False)
@@ -225,6 +225,7 @@ class Image_Scraping(object):
                              pool)
 
             i = i + 1
+        logger.info("takes ~{0} seconds for {1} images".format(time.time()-_start, self.max))
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
