@@ -37,6 +37,8 @@ class Image_Scraping(object):
     def __init__(self, 
                 search_keyword = [],
                 output = "",
+                chips = "",
+                unique=False,
                 limit = 20,
                 thread = 2,
                 scroll = 200,
@@ -48,6 +50,8 @@ class Image_Scraping(object):
         self.fin = 0
         self.search_keyword = search_keyword
         self.output = output
+        self.chips = chips
+        self.unique = unique
         self.max = limit
         self.thread = thread
         self.scroll = scroll
@@ -176,22 +180,23 @@ class Image_Scraping(object):
                 #calc default path
                 file_path = os.path.dirname(os.path.realpath(__file__))
                 dir_name = new_path = os.path.join(file_path[:-len(os.path.basename(file_path))],\
-                 "data/raw_downloaded_image/{0}".format("{0}-{1}".format(search_term, str(self.color)) if self.color\
-                  else search_term))
+                 "data/raw_downloaded_image/{0}".format(search_term))
 
             if not os.path.exists(dir_name):
                 if not self.get_folder(dir_name):
                     raise Exception("cant create folder!!!")
             else:
-                if os.listdir(dir_name):
-                    dir_name = os.path.join(dir_name, str(uuid.uuid4()))
-                    if not self.get_folder(dir_name):
-                        raise Exception("cant create folder!!!")
+                if self.unique:
+                    #create unique folder, avoid overwrite
+                    if os.listdir(dir_name):
+                        dir_name = os.path.join(dir_name, str(uuid.uuid4()))
+                        if not self.get_folder(dir_name):
+                            raise Exception("cant create folder!!!")
 
             _type = "tbs=itp:{0}".format(self.image_type) if self.image_type else ""
             logger.info("Saving Files in {0}".format(dir_name))
             color_param = ('&tbs=ic:specific,isc:' + self.color) if self.color else ''
-            url = 'https://www.google.com/search?q=' + search + '&espv=2&biw=1366&bih=667&site=webhp&source=lnms&'+ _type +'&tbm=isch' + color_param + '&sa=X&ei=XosDVaCXD8TasATItgE&ved=0CAcQ_AUoAg'
+            url = 'https://www.google.com/search?q=' + search + '&espv=2&biw=1366&bih=667&site=webhp&source=lnms&'+ _type +'&tbm=isch' + color_param + '&sa=X&ei=XosDVaCXD8TasATItgE&ved=0CAcQ_AUoAg' + "&chips=q:" + search + ",online_chips:" + self.chips
             logger.info("Starting Download Process...{0}".format(url))
 
             manager = multiprocessing.Manager()
@@ -231,9 +236,11 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-k', '--keywords', help='delimited list input', type=str, required=True)
     parser.add_argument('-o', '--output', help='output directory', type=str, required=False)
+    parser.add_argument('-u', '--unique', help='create always new sub unique folder', type=bool, required=False, default=False)
     parser.add_argument('-m', '--max', help='maximal download images', type=int, required=False, default=1000)
     parser.add_argument('-t', '--thread', help='download workers range', type=int, required=False, default=6)
     parser.add_argument('-s', '--scroll', help='scroll range', type=int, required=False, default=1000)
+    parser.add_argument('-ch', '--chips', help='chips string', type=str, required=False)
     parser.add_argument('-p', '--proxy', help='proxy ip:port', type=str, required=False)
     parser.add_argument('-y', '--type', help='search image type', type=str, required=False, choices=['face', 'clipart', 'photo', 'lineart', 'animated'])
     parser.add_argument('-c', '--color', help='filter on color', type=str, required=False, choices=['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'white', 'gray', 'black', 'brown'])
@@ -250,6 +257,8 @@ if __name__=="__main__":
 
     search = Image_Scraping(search_keyword,
                             args.output,
+                            args.chips,
+                            args.unique, 
                             args.max,
                             args.thread,
                             args.scroll,

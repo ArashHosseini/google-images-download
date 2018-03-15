@@ -20,6 +20,18 @@ use scroll flag to define the scrolling range by pixel and the download-pool ran
 
 `python google-images-download.py --keywords "Neil Armstrong, nasa astronaut neil armstrong, apollo neil armstrong" --max 500 --scroll 200 --thread 6 --type face` optional laso `--proxy ip:port` for proxy and `--verbose 3` for debug.
 
+('-k', '--keywords', help='delimited list input', type=str, required=True)
+('-o', '--output', help='output directory', type=str, required=False)
+('-u', '--unique', help='create always new sub unique folder', type=bool, required=False, default=False)
+('-m', '--max', help='maximal download images', type=int, required=False, default=1000)
+('-t', '--thread', help='download workers range', type=int, required=False, default=6)
+('-s', '--scroll', help='scroll range', type=int, required=False, default=1000)
+('-ch', '--chips', help='chips string', type=str, required=False)
+('-p', '--proxy', help='proxy ip:port', type=str, required=False)
+('-y', '--type', help='search image type', type=str, required=False, choices=['face', 'clipart', 'photo', 'lineart', 'animated'])
+('-c', '--color', help='filter on color', type=str, required=False, choices=['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'white', 'gray', 'black', 'brown'])
+('-v', '--verbose', action="store", help="0:Error, 1:Warning, 2:INFO*(default), 3:debug", default=2, type=int)
+
 
 ```
 python google-images-download.py --keywords "tom hanks" --max 200 --scroll 200 --thread 10
