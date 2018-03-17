@@ -112,8 +112,9 @@ class Image_Scraping(object):
         browser.close()
 
 
-    def download_worker(self, args):
-        end, html_link_queue, thread, dir_name = args
+    def download_worker(self, end, html_link_queue, thread, dir_name):
+        logger.info("thread {0} started".format(thread))
+        #end, html_link_queue, thread, dir_name = args
         while True:
             link = html_link_queue.get()
             try:
@@ -124,6 +125,7 @@ class Image_Scraping(object):
                     ext = ["jpg"]
                 _file = "{0}.{1}".format(str(image_name[0]),str(ext[0]))
                 _file = os.path.join(dir_name, _file)
+                logger.debug(_file)
                 if os.path.exists(_file):
                     continue
 
@@ -164,8 +166,8 @@ class Image_Scraping(object):
         for p in running_process:
             logger.info("kill {0}".format(p))
             p.join()
-        pool.close()
-        logger.info("close pool {0}".format(pool))
+        #pool.close()
+        #logger.info("close pool {0}".format(pool))
 
     def scraping(self, *args):
         i = 0
@@ -186,6 +188,7 @@ class Image_Scraping(object):
                 if not self.get_folder(dir_name):
                     raise Exception("cant create folder!!!")
             else:
+                logger.info(self.unique)
                 if self.unique:
                     #create unique folder, avoid overwrite
                     if os.listdir(dir_name):
@@ -195,9 +198,10 @@ class Image_Scraping(object):
 
             _type = "tbs=itp:{0}".format(self.image_type) if self.image_type else ""
             logger.info("Saving Files in {0}".format(dir_name))
+            os.startfile(dir_name)
             color_param = ('&tbs=ic:specific,isc:' + self.color) if self.color else ''
             url = 'https://www.google.com/search?q=' + search + '&espv=2&biw=1366&bih=667&site=webhp&source=lnms&'+ _type +'&tbm=isch' + color_param + '&sa=X&ei=XosDVaCXD8TasATItgE&ved=0CAcQ_AUoAg' + "&chips=q:" + search + ",online_chips:" + self.chips
-            logger.info("Starting Download Process...{0}".format(url))
+            logger.info("Starting Download Process...{0}".format(search))
 
             manager = multiprocessing.Manager()
             lifetime_end = manager.Value(ctypes.c_char_p, False)
@@ -207,10 +211,18 @@ class Image_Scraping(object):
             search_links = multiprocessing.Process(target=self.collector, args=(url, html_link_queue,lifetime_end, ))
             running_process.append(search_links)
             search_links.start()
-
-            pool = multiprocessing.Pool()
+            pool = []
+            #avoid pool for yet, window fix needed!!!
+            #pool = multiprocessing.Pool()
             threads = self.thread
-            result = pool.map_async(self.download_worker, [(lifetime_end, link_queue, "Thread {0}".format(n), dir_name) for n in range(int(threads))])
+            #result = pool.map_async(self.download_worker, [(lifetime_end, link_queue, "Thread {0}".format(n), dir_name) for n in range(int(threads))])
+			
+            for thread in range(threads):
+                thread_a = multiprocessing.Process(target=self.download_worker, args=(lifetime_end, link_queue, "Thread {0}".format(str(thread)), dir_name, ))
+                running_process.append(thread_a)
+                thread_a.start()
+				
+
             while len(os.listdir(dir_name))<=int(self.max):
                 try:
                     link = html_link_queue.get()
@@ -238,9 +250,9 @@ if __name__=="__main__":
     parser.add_argument('-o', '--output', help='output directory', type=str, required=False)
     parser.add_argument('-u', '--unique', help='create always new sub unique folder', type=bool, required=False, default=False)
     parser.add_argument('-m', '--max', help='maximal download images', type=int, required=False, default=1000)
-    parser.add_argument('-t', '--thread', help='download workers range', type=int, required=False, default=6)
+    parser.add_argument('-t', '--thread', help='download workers range', type=int, required=False, default=2)
     parser.add_argument('-s', '--scroll', help='scroll range', type=int, required=False, default=1000)
-    parser.add_argument('-ch', '--chips', help='chips string', type=str, required=False)
+    parser.add_argument('-ch', '--chips', help='chips string', type=str, required=False, default='')
     parser.add_argument('-p', '--proxy', help='proxy ip:port', type=str, required=False)
     parser.add_argument('-y', '--type', help='search image type', type=str, required=False, choices=['face', 'clipart', 'photo', 'lineart', 'animated'])
     parser.add_argument('-c', '--color', help='filter on color', type=str, required=False, choices=['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'white', 'gray', 'black', 'brown'])
