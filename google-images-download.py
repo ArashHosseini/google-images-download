@@ -82,11 +82,14 @@ class Image_Scraping(object):
             return True
 
     def collector(self, url, html_link_queue, end):
-        browser = webdriver.Firefox()
-
+        options = webdriver.FirefoxOptions()
+        capabilities = webdriver.DesiredCapabilities().FIREFOX
+        capabilities["marionette"] = False
+        options.add_argument('--no-sandbox')
+        options.add_argument("--headless")
+        browser = webdriver.Firefox(firefox_options=options, capabilities=capabilities)
+        
         if self.proxy_ip:
-            capabilities = webdriver.DesiredCapabilities().FIREFOX
-            capabilities["marionette"] = False
             fp = webdriver.FirefoxProfile()
             # Direct = 0, Manual = 1, PAC = 2, AUTODETECT = 4, SYSTEM = 5
             fp.set_preference("network.proxy.type", 1)
